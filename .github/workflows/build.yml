@@ -11,6 +11,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0  # 禁用增量编译，减少缓存大小
+  CARGO_PROFILE_RELEASE_DEBUG: 0  # 不生成调试信息
 
 jobs:
   build-windows:
@@ -28,30 +30,27 @@ jobs:
         with:
           toolchain: stable
       
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          workspaces: src
+          cache-on-failure: true
+          shared-key: build
       
-      - name: Cache cargo index
+      - name: Cache cargo-packager
+        id: cache-cargo-packager
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: src/target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+          path: ~/.cargo/bin/cargo-packager*
+          key: ${{ runner.os }}-cargo-packager-latest
       
       - name: Install cargo-packager
+        if: steps.cache-cargo-packager.outputs.cache-hit != 'true'
         run: cargo install cargo-packager --locked
       
       - name: Build release
         working-directory: src
-        run: cargo build --release --features plugin
+        run: cargo build --release --locked
       
       - name: Package application
         working-directory: src
