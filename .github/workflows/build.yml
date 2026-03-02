@@ -1,0 +1,79 @@
+name: Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_artifact:
+        description: 'Upload build artifact'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: src/target
+          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
+      
+      - name: Build release
+        working-directory: src
+        run: cargo build --release --features plugin
+      
+      - name: Package application
+        working-directory: src
+        run: cargo packager --release
+      
+      - name: Find installer
+        id: find_installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "src/target/release" -Filter "*.exe" -Recurse | Select-Object -First 1
+          if ($installer) {
+            echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+            echo "installer_name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+            echo "Found installer: $($installer.FullName)"
+          } else {
+            echo "No installer found!"
+            exit 1
+          }
+      
+      - name: Upload artifacts
+        if: ${{ inputs.upload_artifact == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: ${{ steps.find_installer.outputs.installer_path }}
