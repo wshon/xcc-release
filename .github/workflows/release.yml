@@ -4,6 +4,9 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0  # 禁用增量编译，减少缓存大小
@@ -65,6 +68,7 @@ jobs:
         with:
           files: ${{ steps.find_installer.outputs.installer_path }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
