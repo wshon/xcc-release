@@ -41,6 +41,11 @@ jobs:
       - name: Install cargo-packager
         run: cargo binstall cargo-packager --no-confirm
       
+      - name: Add cargo bin to PATH
+        shell: pwsh
+        run: |
+          echo "$env:CARGO_HOME\bin" >> $env:GITHUB_PATH
+      
       - name: Build release
         working-directory: src
         run: cargo build --release --locked
