@@ -41,7 +41,7 @@ jobs:
         uses: cargo-bins/cargo-binstall@main
       
       - name: Install cargo-packager
-        run: cargo binstall cargo-packager --no-confirm
+        run: cargo binstall cargo-packager --no-confirm --force
       
       - name: Build release
         working-directory: src
